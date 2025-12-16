@@ -2,10 +2,14 @@ import "./chat.css"
 import EmojiPicker from "emoji-picker-react"
 import { useEffect, useRef } from "react"
 import { useState } from "react"
+import authFetch from '../lib/authFetch'; // Import hàm tiện ích
+import { toast } from "react-toastify";
 
+const CHAT_ID = 1;
 const Chat = () => {
 const [open, setOpen] = useState(false)
 const [text, setText] = useState("")
+const [isSending, setIsSending] = useState(false); // Trạng thái gửi
 
 const endRef = useRef(null)
 
@@ -19,6 +23,37 @@ const handleEmoji = e =>{
 }
 
 console.log(text)
+
+const handleSend = async () => {
+    if (!text || isSending) return; // Không gửi nếu trống hoặc đang gửi
+
+    setIsSending(true);
+    
+    try {
+        const res = await authFetch('/messages', {
+            method: 'POST',
+            body: JSON.stringify({
+                chatId: CHAT_ID, // Thay bằng ID chat thực tế
+                content: text,
+            }),
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+            toast.success("Tin nhắn đã được gửi!");
+            setText(""); // Xóa nội dung input
+            // TODO: Tại đây sẽ là logic hiển thị tin nhắn mới ngay lập tức (Socket.IO)
+        } else {
+            toast.error(data.message || "Gửi tin nhắn thất bại.");
+        }
+    } catch (err) {
+        console.error("Lỗi gửi tin nhắn:", err);
+        toast.error(err.message || "Lỗi mạng hoặc Token hết hạn.");
+    } finally {
+        setIsSending(false);
+    }
+  }
 
   return (
     <div className='chat'>
@@ -86,6 +121,34 @@ console.log(text)
       </div>
     </div>
   )
+}
+
+// (Giả định bạn đã tạo file lib/authFetch.js)
+
+
+const handleSend = async (chatId, content) => {
+    // chatId và content là dữ liệu từ input
+
+    try {
+        const res = await authFetch('/messages', { // Tự động thêm Token
+            method: 'POST',
+            body: JSON.stringify({
+                chatId: chatId,
+                content: content,
+            }),
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+            // Xử lý thành công
+            // (Tuy nhiên, để hiển thị real-time, bạn cần bước Socket.IO tiếp theo)
+        } else {
+            // Xử lý lỗi
+        }
+    } catch (err) {
+        // Xử lý lỗi mạng/token hết hạn
+    }
 }
 
 export default Chat

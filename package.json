@@ -10,7 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.1",
+    "cors": "^2.8.5",
     "emoji-picker-react": "^4.16.1",
+    "express": "^5.2.1",
+    "firebase": "^12.6.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "mysql2": "^3.15.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-toastify": "^11.0.5"
@@ -24,5 +32,18 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
     "vite": "^5.2.0"
-  }
+  },
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "main": "vite.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sang-NV/chat-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sang-NV/chat-app/issues"
+  },
+  "homepage": "https://github.com/Sang-NV/chat-app#readme"
 }
