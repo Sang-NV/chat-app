@@ -5,7 +5,7 @@ import ChatList from "./chatList/chatList.jsx"
 const List = () => {
   return (
     <div className='list'>
-      <Userinfor />
+
       <ChatList />
     </div>
   )

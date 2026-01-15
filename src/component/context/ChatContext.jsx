@@ -1,23 +1,40 @@
-// src/context/ChatContext.jsx
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import authFetch from '../lib/authFetch'; 
 
 const ChatContext = createContext();
 
-// Khởi tạo trạng thái chat rỗng
 const INITIAL_CHAT_STATE = {
     chatId: null,
-    receiver: null, // Chứa {id, username, imgUrl} của người nhận
+    receiver: null, 
     isChatOpen: false,
+    isBlockedByMe: false,
+    amIBlockedByReceiver: false
+};
+
+// Hàm tải trạng thái chặn
+const fetchBlockStatus = async (receiverId) => {
+    try {
+        const res = await authFetch(`/users/block/status/${receiverId}`); // Sử dụng API đã tạo
+        if (res.ok) {
+            const data = await res.json();
+            return {
+                isBlockedByMe: data.isBlockedByMe,
+                amIBlockedByReceiver: data.amIBlocked,
+            };
+        }
+    } catch (err) {
+        console.error("Error fetching block status:", err);
+    }
+    return { isBlockedByMe: false, amIBlockedByReceiver: false };
 };
 
 export const ChatProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const [currentChat, setCurrentChat] = useState(INITIAL_CHAT_STATE);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshingChats, setIsRefreshingChats] = useState(false); 
 
-    // B1. Hàm tải thông tin người dùng hiện tại
+    // Hàm tải thông tin người dùng hiện tại
     const fetchCurrentUser = async () => {
         const token = localStorage.getItem('userToken');
         if (!token) {
@@ -25,46 +42,44 @@ export const ChatProvider = ({ children }) => {
             setIsLoading(false);
             return;
         }
-
         try {
-            // Sử dụng API /api/users/me đã có trong server.js
             const res = await authFetch('/users/me'); 
             const data = await res.json();
-
             if (res.ok) {
                 setCurrentUser(data);
             } else {
                 localStorage.removeItem('userToken');
-                localStorage.removeItem('userData');
                 setCurrentUser(null);
             }
         } catch (err) {
-            console.error("Fetch current user error:", err);
             setCurrentUser(null);
         } finally {
             setIsLoading(false);
         }
     };
 
-    // B2. Xử lý đăng nhập/đăng ký thành công
     const loginSuccess = (userData) => {
-        // Hàm này được gọi từ login.jsx
         setCurrentUser(userData);
         setIsLoading(false);
+        setIsRefreshingChats(prev => !prev); 
     };
 
-    // B3. Xử lý đăng xuất
     const logout = () => {
         localStorage.removeItem('userToken');
-        localStorage.removeItem('userData');
         setCurrentUser(null);
         setCurrentChat(INITIAL_CHAT_STATE);
-        // Có thể cần reload trang hoặc chuyển về màn hình Login
     };
 
-    // B4. Chọn một chat trong ChatList
-    const changeChat = (chatItem) => {
-        // chatItem là object lấy từ API GET /api/chats
+    const changeChat = async (chatItem) =>  {
+        setIsLoading(true);
+        const receiverInfo = {
+            id: chatItem.receiverId,
+            username: chatItem.receiverName,
+            imgUrl: chatItem.receiverImg,
+        };
+        // 1. Tải trạng thái chặn mới nhất
+        const blockStatus = await fetchBlockStatus(receiverInfo.id);
+
         setCurrentChat({
             chatId: chatItem.chatId,
             receiver: {
@@ -73,10 +88,25 @@ export const ChatProvider = ({ children }) => {
                 imgUrl: chatItem.receiverImg,
             },
             isChatOpen: true,
+            isBlockedByMe: blockStatus.isBlockedByMe,
+            amIBlockedByReceiver: blockStatus.amIBlockedByReceiver
         });
-    };
 
-    // Kiểm tra trạng thái người dùng khi khởi động
+        setIsLoading(false);
+    };
+    
+    const refreshChatList = () => {
+        setIsRefreshingChats(prev => !prev);
+    }
+
+    const updateBlockState = (newBlockStatus) => {
+    setCurrentChat(prev => ({
+        ...prev,
+        isBlockedByMe: newBlockStatus.isBlockedByMe !== undefined ? newBlockStatus.isBlockedByMe : prev.isBlockedByMe,
+        amIBlockedByReceiver: newBlockStatus.amIBlockedByReceiver !== undefined ? newBlockStatus.amIBlockedByReceiver : prev.amIBlockedByReceiver,
+    }));
+};
+
     useEffect(() => {
         fetchCurrentUser();
     }, []);
@@ -86,9 +116,12 @@ export const ChatProvider = ({ children }) => {
             currentUser,
             currentChat,
             isLoading,
+            isRefreshingChats,
             loginSuccess,
             logout,
-            changeChat
+            changeChat,
+            refreshChatList,
+            updateBlockState
         }}>
             {children}
         </ChatContext.Provider>
